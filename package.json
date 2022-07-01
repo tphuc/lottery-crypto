@@ -1,0 +1,24 @@
+{
+  "name": "lottery-crypto",
+  "version": "0.0.1",
+  "description": "smart contracts for lottery game on blockchain",
+  "main": "index.js",
+  "author": "felixtran",
+  "license": "MIT",
+  "devDependencies": {
+    "@nomiclabs/hardhat-ethers": "^2.0.0",
+    "@nomiclabs/hardhat-waffle": "^2.0.0",
+    "chai": "^4.2.0",
+    "ethereum-waffle": "^3.0.0",
+    "ethers": "^5.0.0",
+    "hardhat": "^2.9.9"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.7.0"
+  },
+  "scripts": {
+    "compile": "npx hardhat compile",
+    "flattern": "npx hardhat flatten",
+    "test": "npx hardhat test"
+  }
+}
