@@ -27,6 +27,7 @@ contract KriptoLottery is Ownable, Pausable {
 
 
     mapping(uint256 => LotteryPlay) public lotteries;
+   
     uint16 public currentLottery;
 
     struct LotteryPlay {
@@ -35,6 +36,10 @@ contract KriptoLottery is Ownable, Pausable {
         bytes32 blockHash;
         address winner;
         Participant[] participants;
+        mapping(address => uint256) secretHashes;
+        mapping(address => uint256) submittedSecrets;
+        uint submittedCount;
+        uint256 XOR;
     }
 
     struct Participant {
@@ -67,20 +72,40 @@ contract KriptoLottery is Ownable, Pausable {
 
 
 
-    function join() public payable whenNotPaused returns (uint256) {
+    function join(uint256 nonce) public payable whenNotPaused returns (uint256) {
         // Anyone can apply as much as they want.
         require(
             lotteries[currentLottery].participants.length + 1 <= maxParticipant
         );
         require(msg.value == lotteryAmount);
+        require(nonce > 0, "secret nonce number is required");
+        lotteries[currentLottery].secretHashes[msg.sender] = nonce;
 
         lotteries[currentLottery].participants.push(Participant(msg.sender));
         emit ApplicationDone(lotteries[currentLottery].participants.length - 1);
         return lotteries[currentLottery].participants.length - 1;
     }
 
+
+    function submitSecret(uint secret) public payable whenNotPaused {
+        if (uint256(keccak256(abi.encodePacked(secret))) == lotteries[currentLottery].secretHashes[msg.sender]){
+            lotteries[currentLottery].submittedSecrets[msg.sender] = secret;
+            lotteries[currentLottery].XOR = lotteries[currentLottery].XOR ^ secret;
+            lotteries[currentLottery].submittedCount++;
+        }
+
+    }
+
     function getCurrentCount() public view returns (uint256) {
         return lotteries[currentLottery].participants.length;
+    }
+
+    function getAddressSecretHash() public view returns (uint256) {
+        return lotteries[currentLottery].secretHashes[msg.sender];
+    }
+
+    function getCurrentSubmittedCount() public view returns (uint256) {
+        return lotteries[currentLottery].submittedCount;
     }
 
 
@@ -117,6 +142,7 @@ contract KriptoLottery is Ownable, Pausable {
         lotteries[currentLottery].blockHash = blockhash(
             lotteries[currentLottery].startBlock
         );
+        lotteries[currentLottery].submittedCount = 0;
         // Set the next waiting time to apprx. 1 week.
         // This is not working since I couldn't find a good way to unit test this.
         lotteries[currentLottery].endBlock =
@@ -197,19 +223,24 @@ contract KriptoLottery is Ownable, Pausable {
 
     // Helper functions
 
+    // function random() internal view returns (uint256) {
+    //     // I know, I know. I should have use a proper off the chain random generator.
+    //     // Why not implement oraclize and send a pull request?
+    //     uint256 r1 = uint256(blockhash(block.number - 1));
+    //     uint256 r2 = uint256(
+    //         blockhash(lotteries[currentLottery].startBlock)
+    //     );
+
+    //     uint256 val;
+
+    //     assembly {
+    //         val := xor(r1, r2)
+    //     }
+    //     return val % lotteries[currentLottery].participants.length;
+    // }
+
+
     function random() internal view returns (uint256) {
-        // I know, I know. I should have use a proper off the chain random generator.
-        // Why not implement oraclize and send a pull request?
-        uint256 r1 = uint256(blockhash(block.number - 1));
-        uint256 r2 = uint256(
-            blockhash(lotteries[currentLottery].startBlock)
-        );
-
-        uint256 val;
-
-        assembly {
-            val := xor(r1, r2)
-        }
-        return val % lotteries[currentLottery].participants.length;
+        return lotteries[currentLottery].XOR % lotteries[currentLottery].participants.length;
     }
 }
