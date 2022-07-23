@@ -186,7 +186,7 @@ contract KriptoLottery is Ownable, Pausable {
         affiliateAddress = _newAffiliate;
     }
 
- 
+
 
     function runLottery() public onlyOwner returns (uint256, address) {
         require(lotteries[currentLottery].participants.length >= 2);
