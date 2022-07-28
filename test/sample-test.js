@@ -159,6 +159,31 @@ describe("Lottery", async function () {
   });
 
 
+  it('check wallet balance after won lottery', async () => {
+    const [owner, addr1, addr2, addr3] = await ethers.getSigners();
+    const ownerAddress = await lottery.getCurrentSubmittedCount.call();
+    await lottery.connect(addr1).join(sha3(9998), { value: ethers.utils.parseEther('0.02') });
+    await lottery.connect(addr1).submitSecret(9998)
+    await lottery.connect(addr2).join(sha3(1231), { value: ethers.utils.parseEther('0.02') });
+    await lottery.connect(addr2).submitSecret(1231)
+    await lottery.connect(addr2).join(sha3(1128), { value: ethers.utils.parseEther('0.02') });
+    await lottery.connect(addr2).submitSecret(1128)
+
+    let addresses = [addr1, addr2, addr3]
+    let xor = 9998 ^ 1231 ^ 1128;
+    let random = xor % 3;
+    let contractBalance= await ethers.provider.getBalance(lottery.address)
+    let pre_balance = await addresses[random].getBalance()
+    
+    await lottery.connect(owner).runLottery()
+    let data = await lottery.getLastLottery()
+
+    let post_balance = await addresses[random].getBalance()    
+    expect(post_balance).to.equal(pre_balance.add(ethers.utils.parseEther('0.06')))
+
+  });
+
+
 
 
 
