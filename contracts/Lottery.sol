@@ -59,6 +59,21 @@ contract KriptoLottery is Ownable, Pausable {
         affiliateRatio = 0;
     }
 
+     function initialise() public whenPaused onlyOwner {
+        // Balance should be 0 in order to start a new lottery.
+        // otherwise you might end up **stealing** others money.
+        require(address(this).balance == 0);
+        currentLottery++;
+        lotteries[currentLottery].startBlock = block.number;
+        lotteries[currentLottery].blockHash = blockhash(
+            lotteries[currentLottery].startBlock
+        );
+        lotteries[currentLottery].submittedCount = 0;
+        lotteries[currentLottery].endingTime = block.timestamp + durationHours * 1 hours;
+
+    }
+
+
     // only owner
     function setMaxParticipant(uint128 val) public onlyOwner {
         maxParticipant = val;
@@ -79,9 +94,12 @@ contract KriptoLottery is Ownable, Pausable {
         durationHours = val;
     }
 
+    // only owner
+    function setCurrentLotteryEndingTime(uint256 val) public onlyOwner {
+        lotteries[currentLottery].endingTime = val;
+    }
+
     
-
-
 
     function join(uint256 nonce) public payable whenNotPaused returns (uint256) {
         // Anyone can apply as much as they want.
@@ -102,12 +120,29 @@ contract KriptoLottery is Ownable, Pausable {
 
 
     function submitSecret(uint secret) public payable whenNotPaused {
-        if (uint256(keccak256(abi.encodePacked(secret))) == lotteries[currentLottery].secretHashes[msg.sender]){
+        if (uint256(keccak256(abi.encodePacked(secret, msg.sender))) == lotteries[currentLottery].secretHashes[msg.sender]){
             lotteries[currentLottery].submittedSecrets[msg.sender] = secret;
             lotteries[currentLottery].XOR = lotteries[currentLottery].XOR ^ secret;
             lotteries[currentLottery].submittedCount++;
         }
+    }
 
+    function isWalletSubmittedHash() public view returns (bool) {
+        if( lotteries[currentLottery].secretHashes[msg.sender] > 0 ){
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+
+    function isWalletSubmittedSecret() public view returns (bool) {
+        if(lotteries[currentLottery].submittedSecrets[msg.sender] > 0){
+            return true;
+        }
+        else {
+            return false;
+        }
     }
 
     function getCurrentCount() public view returns (uint256) {
@@ -169,22 +204,9 @@ contract KriptoLottery is Ownable, Pausable {
         );
     }
 
-    // Admin tools
 
-    function initialise() public whenPaused onlyOwner {
-        // Balance should be 0 in order to start a new lottery.
-        // otherwise you might end up **stealing** others money.
-        require(address(this).balance == 0);
-        currentLottery++;
-        lotteries[currentLottery].startBlock = block.number;
-        lotteries[currentLottery].blockHash = blockhash(
-            lotteries[currentLottery].startBlock
-        );
-        lotteries[currentLottery].submittedCount = 0;
-        lotteries[currentLottery].endingTime = block.timestamp + durationHours * 1 hours;
 
-    }
-
+   
     function setParticipantsNumber(uint128 newNumber) public onlyOwner {
         maxParticipant = newNumber;
     }
